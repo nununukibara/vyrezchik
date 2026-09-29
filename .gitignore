@@ -216,3 +216,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Large model files
+*.pt
+*.pth
+*.bin
+.venv/
+exports/
+runs/
