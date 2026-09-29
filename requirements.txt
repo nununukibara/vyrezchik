@@ -1,0 +1,11 @@
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch
+torchvision
+ultralytics
+transformers
+fastapi
+uvicorn[standard]
+python-multipart
+pillow
+opencv-python
+numpy

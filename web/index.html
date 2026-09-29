@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Flower Cutter</title>
+<style>
+  :root {
+    --bg: #17171b; --panel: #222228; --panel2: #2a2a32; --border: #3a3a44;
+    --text: #e8e8ec; --sub: #9a9aa6; --accent: #ff40b0; --accent2: #6ee7a0;
+    --btn: #33333d; --btn-hover: #41414d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    display: flex; flex-direction: column; background: var(--bg); color: var(--text);
+    font-family: "Segoe UI", system-ui, sans-serif; font-size: 13px; overflow: hidden;
+  }
+  header {
+    display: flex; align-items: center; gap: 12px; padding: 8px 14px;
+    background: var(--panel); border-bottom: 1px solid var(--border); flex-wrap: wrap;
+  }
+  header h1 { font-size: 15px; font-weight: 600; color: var(--accent); white-space: nowrap; }
+  button {
+    background: var(--btn); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px 12px; cursor: pointer; font-size: 12.5px;
+  }
+  button:hover:not(:disabled) { background: var(--btn-hover); }
+  button:disabled { opacity: 0.4; cursor: default; }
+  button.primary { background: #7c2d64; border-color: #a0417f; }
+  button.primary:hover:not(:disabled) { background: #96377a; }
+  input[type="text"], input[type="number"], select {
+    background: var(--bg); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px 8px; font-size: 12.5px;
+  }
+  .detect-box { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .detect-box label { color: var(--sub); display: flex; align-items: center; gap: 5px; }
+  #detectText { width: 170px; }
+  input[type="range"] { accent-color: var(--accent); }
+  main { flex: 1; display: flex; min-height: 0; }
+  #canvasWrap {
+    flex: 1; position: relative; min-width: 0; background:
+      repeating-conic-gradient(#1b1b20 0% 25%, #202027 0% 50%) 0 0 / 24px 24px;
+  }
+  #cv { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; touch-action: none; }
+  #dropHint {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--sub); font-size: 18px; pointer-events: none; text-shadow: 0 1px 4px #000;
+  }
+  #busy {
+    position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,.65); color: #ffd44d;
+    padding: 5px 12px; border-radius: 6px; display: none; pointer-events: none;
+  }
+  aside {
+    width: 300px; background: var(--panel); border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow-y: auto; flex-shrink: 0;
+  }
+  .panel { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  .panel h2 { font-size: 12px; color: var(--sub); font-weight: 600; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .06em; }
+  .row { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+  .row button { flex: 1; }
+  .hint { color: var(--sub); font-size: 11.5px; line-height: 1.6; }
+  .hint b { color: var(--text); font-weight: 600; }
+  #objList { list-style: none; }
+  #objList li {
+    display: flex; align-items: center; gap: 8px; padding: 6px;
+    background: var(--panel2); border-radius: 6px; margin-bottom: 6px;
+  }
+  #objList img.thumb {
+    width: 52px; height: 52px; object-fit: contain; border-radius: 4px;
+    background: repeating-conic-gradient(#3c3c46 0% 25%, #4a4a56 0% 50%) 0 0 / 12px 12px;
+    flex-shrink: 0;
+  }
+  #objList .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  #objList input[type="text"] { width: 100%; }
+  #objList .score { color: var(--sub); font-size: 11px; }
+  #objList .del {
+    background: none; border: none; color: var(--sub); font-size: 16px; padding: 2px 6px;
+  }
+  #objList .del:hover { color: #ff6b6b; }
+  .exp-opt { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; color: var(--sub); flex-wrap: wrap; }
+  .exp-opt input[type="number"] { width: 64px; }
+  .exp-opt.radio { color: var(--text); }
+  #expName { width: 130px; }
+  #expResult { margin-top: 8px; color: var(--accent2); font-size: 11.5px; word-break: break-all; }
+  #expResult button { margin-top: 6px; }
+  footer {
+    padding: 5px 14px; background: var(--panel); border-top: 1px solid var(--border);
+    color: var(--sub); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #statusErr { color: #ff8080; }
+  .empty { color: var(--sub); padding: 4px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Flower Cutter</h1>
+  <button id="btnOpen">画像を開く</button>
+  <input type="file" id="fileInput" accept="image/*" hidden>
+  <div class="detect-box">
+    <input type="text" id="detectText" placeholder="flower / vase / rose …">
+    <label>しきい値 <input type="range" id="detectThr" min="0.05" max="0.5" step="0.05" value="0.2">
+      <span id="thrVal">0.20</span></label>
+    <button id="btnDetect" disabled>テキストで検出</button>
+  </div>
+  <span class="hint" id="imgInfo"></span>
+</header>
+<main>
+  <div id="canvasWrap">
+    <canvas id="cv"></canvas>
+    <div id="dropHint">画像をドラッグ＆ドロップ、または「画像を開く」</div>
+    <div id="busy">処理中…</div>
+  </div>
+  <aside>
+    <section class="panel">
+      <h2>現在の選択</h2>
+      <div class="row">
+        <button id="btnCommit" class="primary" disabled>オブジェクトとして追加</button>
+        <button id="btnClearPts" disabled>全解除</button>
+      </div>
+      <div class="hint">
+        <b>クリック</b>=対象に含める / <b>右クリック</b>=除外 / <b>Ctrl+Z</b>=1つ戻す<br>
+        <b>ホイール</b>=ズーム / <b>中ドラッグ・Space+ドラッグ</b>=移動 / <b>F</b>=全体表示
+      </div>
+    </section>
+    <section class="panel">
+      <h2>オブジェクト <span id="objCount"></span></h2>
+      <div class="row">
+        <button id="btnAll">全選択</button>
+        <button id="btnNone">選択解除</button>
+      </div>
+      <ul id="objList"><li class="empty">まだありません。花をクリックして追加してください。</li></ul>
+    </section>
+    <section class="panel">
+      <h2>書き出し</h2>
+      <div class="exp-opt radio"><label><input type="radio" name="expMode" value="each" checked> 選択をそれぞれ別々のPNGに</label></div>
+      <div class="exp-opt radio"><label><input type="radio" name="expMode" value="union"> 選択をまとめて1枚のPNGに</label></div>
+      <div class="exp-opt">ファイル名(まとめる時) <input type="text" id="expName" value="combined"></div>
+      <div class="exp-opt">背景 <select id="expBg">
+        <option value="transparent">透過PNG</option>
+        <option value="white">白</option>
+      </select></div>
+      <div class="exp-opt">余白 <input type="number" id="expPad" value="0" min="0" max="200"> px　
+        ふち <input type="number" id="expFeather" value="0" min="0" max="5"> px</div>
+      <button id="btnExport" class="primary" disabled>書き出し</button>
+      <div id="expResult"></div>
+    </section>
+  </aside>
+</main>
+<footer id="status">画像を開いてください</footer>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const cv = $("cv"), ctx = cv.getContext("2d");
+
+// ---- state ----
+let img = null;            // preview Image (natural size = preview dims)
+let imgW = 0, imgH = 0;    // original image size
+let pw = 0, ph = 0;        // preview size
+let previewScale = 1;      // pw / imgW
+let view = { x: 0, y: 0, zoom: 1 };
+let fitZoom = 1;
+let points = [];           // {x, y, l} in original image coords
+let maskImg = null;        // overlay Image (preview size)
+let currentMask = null;    // {mask_id, area, bbox}
+let objects = [];          // {key, maskId, name, png, bbox, score, thumb, checked}
+let objSeq = 0;
+let spaceDown = false, panning = false, panStart = null;
+let segAbort = null, segTimer = null;
+
+// ---- utils ----
+function setStatus(msg, isErr = false) {
+  $("status").innerHTML = isErr ? `<span id="statusErr">${msg}</span>` : msg;
+}
+function fmtInt(n) { return n.toLocaleString("ja-JP"); }
+function busy(on) { $("busy").style.display = on ? "block" : "none"; }
+
+// ---- canvas / view ----
+function resizeCanvas() {
+  const r = $("canvasWrap").getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(r.width * dpr);
+  cv.height = Math.round(r.height * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  cv.cw = r.width; cv.ch = r.height;
+  render();
+}
+window.addEventListener("resize", resizeCanvas);
+
+function fitView() {
+  if (!img) return;
+  fitZoom = Math.min(cv.cw / pw, cv.ch / ph);
+  view.zoom = fitZoom;
+  view.x = (cv.cw - pw * view.zoom) / 2;
+  view.y = (cv.ch - ph * view.zoom) / 2;
+  render();
+}
+
+function render() {
+  ctx.clearRect(0, 0, cv.cw, cv.ch);
+  if (!img) return;
+  ctx.imageSmoothingEnabled = view.zoom < 4;
+  ctx.drawImage(img, view.x, view.y, pw * view.zoom, ph * view.zoom);
+  if (maskImg) {
+    ctx.globalAlpha = 0.42;
+    ctx.drawImage(maskImg, view.x, view.y, pw * view.zoom, ph * view.zoom);
+    ctx.globalAlpha = 1;
+  }
+  for (const p of points) {
+    const sx = view.x + p.x * previewScale * view.zoom;
+    const sy = view.y + p.y * previewScale * view.zoom;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 6, 0, Math.PI * 2);
+    ctx.fillStyle = p.l === 1 ? "#22c55e" : "#ef4444";
+    ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = "#fff"; ctx.stroke();
+    ctx.strokeStyle = p.l === 1 ? "#063" : "#600";
+    ctx.beginPath();
+    ctx.moveTo(sx - 3, sy); ctx.lineTo(sx + 3, sy);
+    if (p.l === 1) { ctx.moveTo(sx, sy - 3); ctx.lineTo(sx, sy + 3); }
+    ctx.stroke();
+  }
+}
+
+function screenToImage(e) {
+  const r = cv.getBoundingClientRect();
+  const sx = e.clientX - r.left, sy = e.clientY - r.top;
+  return {
+    x: (sx - view.x) / view.zoom / previewScale,
+    y: (sy - view.y) / view.zoom / previewScale,
+  };
+}
+
+// ---- interactions ----
+cv.addEventListener("contextmenu", (e) => e.preventDefault());
+cv.addEventListener("mousedown", (e) => {
+  if (!img) return;
+  if (e.button === 1 || (e.button === 0 && spaceDown)) {
+    panning = true;
+    panStart = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y };
+    e.preventDefault();
+    return;
+  }
+  if (e.button === 0) addPoint(e, 1);
+  else if (e.button === 2) addPoint(e, 0);
+});
+window.addEventListener("mouseup", () => { panning = false; });
+window.addEventListener("mousemove", (e) => {
+  if (panning && panStart) {
+    view.x = panStart.vx + (e.clientX - panStart.x);
+    view.y = panStart.vy + (e.clientY - panStart.y);
+    render();
+  }
+  if (img) {
+    const p = screenToImage(e);
+    if (p.x >= 0 && p.y >= 0 && p.x < imgW && p.y < imgH)
+      $("imgInfo").textContent = `${imgW}×${imgH}  (${Math.round(p.x)}, ${Math.round(p.y)})`;
+  }
+});
+cv.addEventListener("wheel", (e) => {
+  if (!img) return;
+  e.preventDefault();
+  const r = cv.getBoundingClientRect();
+  const sx = e.clientX - r.left, sy = e.clientY - r.top;
+  const old = view.zoom;
+  view.zoom = Math.min(fitZoom * 60, Math.max(fitZoom * 0.15, view.zoom * Math.exp(-e.deltaY * 0.0012)));
+  view.x = sx - (sx - view.x) * (view.zoom / old);
+  view.y = sy - (sy - view.y) * (view.zoom / old);
+  render();
+}, { passive: false });
+
+window.addEventListener("keydown", (e) => {
+  const tag = (e.target && e.target.tagName || "").toLowerCase();
+  if (tag === "input" || tag === "textarea" || tag === "select") return;
+  if (e.code === "Space") { spaceDown = true; e.preventDefault(); }
+  if (e.key === "f" || e.key === "F") fitView();
+  if (e.key === "Escape") clearPoints();
+  if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+    e.preventDefault();
+    points.pop();
+    scheduleSegment();
+  }
+});
+window.addEventListener("keyup", (e) => { if (e.code === "Space") spaceDown = false; });
+
+function addPoint(e, label) {
+  const p = screenToImage(e);
+  if (p.x < 0 || p.y < 0 || p.x >= imgW || p.y >= imgH) return;
+  points.push({ x: Math.round(p.x), y: Math.round(p.y), l: label });
+  render();
+  scheduleSegment();
+}
+
+function clearPoints() {
+  points = [];
+  maskImg = null;
+  currentMask = null;
+  updateButtons();
+  render();
+}
+
+function scheduleSegment() {
+  if (!points.length) { clearPoints(); return; }
+  clearTimeout(segTimer);
+  segTimer = setTimeout(runSegment, 120);
+}
+
+async function runSegment() {
+  if (segAbort) segAbort.abort();
+  segAbort = new AbortController();
+  const body = JSON.stringify({ points: points.map((p) => [p.x, p.y, p.l]) });
+  busy(true);
+  try {
+    const res = await fetch("/api/segment", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body, signal: segAbort.signal,
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      setStatus(j.detail || "セグメンテーション失敗", true);
+      return;
+    }
+    const data = await res.json();
+    currentMask = null;
+    maskImg = null;
+    if (data.mask_id) {
+      currentMask = data;
+      maskImg = new Image();
+      maskImg.onload = render;
+      maskImg.src = data.png;
+    }
+    updateButtons();
+    setStatus(`マスク面積 ${fmtInt(data.area)} px (${(data.elapsed_ms / 1000).toFixed(2)}s)`);
+    render();
+  } catch (err) {
+    if (err.name !== "AbortError") setStatus("通信エラー: " + err.message, true);
+  } finally {
+    busy(false);
+  }
+}
+
+// ---- objects ----
+function makeThumb(pngUri, bbox) {
+  return new Promise((resolve) => {
+    const m = new Image();
+    m.onload = () => {
+      const s = previewScale;
+      const bx = bbox[0] * s, by = bbox[1] * s;
+      const bw = Math.max(1, (bbox[2] - bbox[0]) * s), bh = Math.max(1, (bbox[3] - bbox[1]) * s);
+      const c = document.createElement("canvas");
+      const k = Math.min(52 / bw, 52 / bh, 4);
+      c.width = Math.max(1, Math.round(bw * k));
+      c.height = Math.max(1, Math.round(bh * k));
+      const g = c.getContext("2d");
+      g.drawImage(img, bx, by, bw, bh, 0, 0, c.width, c.height);
+      g.globalCompositeOperation = "destination-in";
+      g.drawImage(m, bx, by, bw, bh, 0, 0, c.width, c.height);
+      resolve(c.toDataURL("image/png"));
+    };
+    m.src = pngUri;
+  });
+}
+
+async function addObject(name, maskData, scoreText) {
+  const thumb = await makeThumb(maskData.png, maskData.bbox);
+  objects.push({
+    key: ++objSeq,
+    maskId: maskData.mask_id,
+    name,
+    png: maskData.png,
+    bbox: maskData.bbox,
+    score: scoreText,
+    thumb,
+    checked: true,
+  });
+  renderObjects();
+}
+
+function renderObjects() {
+  const ul = $("objList");
+  ul.innerHTML = "";
+  $("objCount").textContent = objects.length ? `(${objects.length})` : "";
+  if (!objects.length) {
+    ul.innerHTML = '<li class="empty">まだありません。花をクリックして追加してください。</li>';
+    updateButtons();
+    return;
+  }
+  for (const o of objects) {
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <input type="checkbox" ${o.checked ? "checked" : ""}>
+      <img class="thumb" src="${o.thumb}" title="${o.name}">
+      <div class="meta">
+        <input type="text" value="${o.name.replace(/"/g, "&quot;")}">
+        <span class="score">${o.score}</span>
+      </div>
+      <button class="del" title="削除">×</button>`;
+    li.querySelector('input[type="checkbox"]').addEventListener("change", (e) => {
+      o.checked = e.target.checked;
+      updateButtons();
+    });
+    li.querySelector('input[type="text"]').addEventListener("change", (e) => { o.name = e.target.value; });
+    li.querySelector(".del").addEventListener("click", () => {
+      objects = objects.filter((x) => x.key !== o.key);
+      renderObjects();
+    });
+    ul.appendChild(li);
+  }
+  updateButtons();
+}
+
+function updateButtons() {
+  $("btnCommit").disabled = !currentMask;
+  $("btnClearPts").disabled = !points.length && !currentMask;
+  $("btnExport").disabled = !objects.some((o) => o.checked);
+  const n = objects.filter((o) => o.checked).length;
+  $("btnExport").textContent = n ? `書き出し (${n}点)` : "書き出し";
+}
+
+$("btnCommit").addEventListener("click", async () => {
+  if (!currentMask) return;
+  const base = ($("detectText").value.trim() || "object");
+  const name = `${base}_${String(objSeq + 1).padStart(2, "0")}`;
+  await addObject(name, currentMask, `面積 ${fmtInt(currentMask.area)} px`);
+  clearPoints();
+  setStatus(`「${name}」を追加しました`);
+});
+
+$("btnClearPts").addEventListener("click", clearPoints);
+$("btnAll").addEventListener("click", () => {
+  objects.forEach((o) => (o.checked = true));
+  renderObjects();
+});
+$("btnNone").addEventListener("click", () => {
+  objects.forEach((o) => (o.checked = false));
+  renderObjects();
+});
+
+// ---- open image ----
+async function openFile(file) {
+  if (!file || !file.type.startsWith("image/")) {
+    setStatus("画像ファイルを選んでください", true);
+    return;
+  }
+  busy(true);
+  setStatus("画像を解析中… (初回は数秒)");
+  try {
+    const fd = new FormData();
+    fd.append("file", file, file.name);
+    const res = await fetch("/api/open", { method: "POST", body: fd });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw new Error(j.detail || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    imgW = data.width; imgH = data.height;
+    pw = data.preview_w; ph = data.preview_h;
+    previewScale = pw / imgW;
+    points = []; maskImg = null; currentMask = null; objects = []; objSeq = 0;
+    img = new Image();
+    img.onload = () => {
+      $("dropHint").style.display = "none";
+      $("btnDetect").disabled = false;
+      fitView();
+      updateButtons();
+      renderObjects();
+    };
+    img.src = data.preview;
+    setStatus(`${data.stem} — ${imgW}×${imgH} (エンコード ${data.encode_ms}ms)。花をクリックしてください。`);
+  } catch (err) {
+    setStatus("画像を開けません: " + err.message, true);
+  } finally {
+    busy(false);
+  }
+}
+
+$("btnOpen").addEventListener("click", () => $("fileInput").click());
+$("fileInput").addEventListener("change", (e) => {
+  if (e.target.files[0]) openFile(e.target.files[0]);
+  e.target.value = "";
+});
+window.addEventListener("dragover", (e) => e.preventDefault());
+window.addEventListener("drop", (e) => {
+  e.preventDefault();
+  if (e.dataTransfer.files[0]) openFile(e.dataTransfer.files[0]);
+});
+
+// ---- text detection ----
+$("detectThr").addEventListener("input", (e) => {
+  $("thrVal").textContent = Number(e.target.value).toFixed(2);
+});
+$("btnDetect").addEventListener("click", async () => {
+  const text = $("detectText").value.trim();
+  if (!text || !img) return;
+  busy(true);
+  setStatus(`「${text}」を検出中…`);
+  try {
+    const res = await fetch("/api/detect", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, threshold: Number($("detectThr").value) }),
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw new Error(j.detail || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    if (!data.detections.length) {
+      setStatus(`「${text}」は見つかりませんでした。しきい値を下げてみてください。`);
+      return;
+    }
+    for (const d of data.detections) {
+      const name = `${d.label}_${String(objSeq + 1).padStart(2, "0")}`;
+      await addObject(name, d, `score ${d.score} / ${fmtInt(d.area)} px`);
+    }
+    setStatus(`「${text}」: ${data.detections.length}件 検出 (${(data.elapsed_ms / 1000).toFixed(1)}s)。不要なものは削除できます。`);
+  } catch (err) {
+    setStatus("検出エラー: " + err.message, true);
+  } finally {
+    busy(false);
+  }
+});
+
+// ---- export ----
+$("btnExport").addEventListener("click", async () => {
+  const sel = objects.filter((o) => o.checked);
+  if (!sel.length) return;
+  const mode = document.querySelector('input[name="expMode"]:checked').value;
+  const req = {
+    items: sel.map((o) => ({ mask_id: o.maskId, name: o.name })),
+    mode,
+    union_name: $("expName").value.trim() || "combined",
+    background: $("expBg").value,
+    padding: Number($("expPad").value) || 0,
+    feather: Number($("expFeather").value) || 0,
+  };
+  busy(true);
+  setStatus("書き出し中…");
+  try {
+    const res = await fetch("/api/export", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req),
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw new Error(j.detail || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    const box = $("expResult");
+    box.innerHTML = `${data.files.length}枚 書き出しました:<br>${data.files.map((f) => "・" + f).join("<br>")}
+      <br><button id="btnFolder">フォルダを開く</button>`;
+    $("btnFolder").addEventListener("click", () => {
+      fetch("/api/open_folder", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: data.dir }),
+      });
+    });
+    setStatus(`書き出し完了: ${data.dir}`);
+  } catch (err) {
+    setStatus("書き出しエラー: " + err.message, true);
+  } finally {
+    busy(false);
+  }
+});
+
+resizeCanvas();
+</script>
+</body>
+</html>
