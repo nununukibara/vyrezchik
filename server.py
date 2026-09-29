@@ -72,7 +72,7 @@ class State:
 
 
 state = State()
-app = FastAPI(title="Flower Cutter")
+app = FastAPI(title="Vyrezchik")
 
 
 # ---------- helpers ----------
