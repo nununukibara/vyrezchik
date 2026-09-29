@@ -1,40 +1,33 @@
-# Vyrezchik / Вырезчик
+# Vyrezchik / ВырезсE�к
 
-画像内の被写体（花瓶・花・個別の花など）を SAM 2.1 + Grounding DINO で高精度に切り抜き、透過PNGとして書き出すローカルGUIツール。
-
-**プロジェクトの正本は[GitHub](https://github.com/nununukibara/202-vyrezchik)です。** 採用済みの基準はmain、開発中の変更はブランチとPRで確認します。現在地と未反映の作業は[STATUS.md](./STATUS.md)にまとめます。
-
-## 読む順
-
-| 順 | 文書 | 読むとき |
+画像�Eの被写体（花瓶・花・個別の花など�E�を SAM 2.1 + Grounding DINO で高精度に刁E��抜き、E��過PNGとして書き�EすローカルGUIチE�Eル、E
+**プロジェクト�E正本は[GitHub](https://github.com/nununukibara/vyrezchik)です、E* 採用済みの基準�Emain、E��発中の変更はブランチとPRで確認します。現在地と未反映の作業は[STATUS.md](./STATUS.md)にまとめます、E
+## 読む頁E
+| 頁E| 斁E�� | 読むとぁE|
 |---|---|---|
-| 1 | [HANDOFF.md](./HANDOFF.md) | 初参加時。製品・環境・落とし穴 |
-| 2 | [STATUS.md](./STATUS.md) | 毎回。現在地・次の一歩・判断待ち |
-| 3 | [AGENTS.md](./AGENTS.md) | 作業・判断・記録・Git操作の規則 |
-| 4 | [docs/RESOURCES.md](./docs/RESOURCES.md)・[WORKLOG.md](./WORKLOG.md) | 利用できる環境と未完了作業 |
-| 5 | [docs/REQUIREMENTS.md](./docs/REQUIREMENTS.md)・[ROADMAP.md](./ROADMAP.md) | 対象要件、受け入れ条件、版と順序 |
+| 1 | [HANDOFF.md](./HANDOFF.md) | 初参加時。製品�E環墁E�E落とし穴 |
+| 2 | [STATUS.md](./STATUS.md) | 毎回。現在地・次の一歩・判断征E�� |
+| 3 | [AGENTS.md](./AGENTS.md) | 作業・判断・記録・Git操作�E規則 |
+| 4 | [docs/RESOURCES.md](./docs/RESOURCES.md)・[WORKLOG.md](./WORKLOG.md) | 利用できる環墁E��未完亁E��業 |
+| 5 | [docs/REQUIREMENTS.md](./docs/REQUIREMENTS.md)・[ROADMAP.md](./ROADMAP.md) | 対象要件、受け�Eれ条件、版と頁E��E|
 
-二度目以降はSTATUSから始め、作業に関係する仕様と実コードを確認します。Claude Codeの入口は[CLAUDE.md](./CLAUDE.md)です。
-
-## 試す
-
+二度目以降�ESTATUSから始め、作業に関係する仕様と実コードを確認します、Elaude Codeの入口は[CLAUDE.md](./CLAUDE.md)です、E
+## 試ぁE
 ```powershell
 .\run.bat
 ```
 
-初回起動時にSAM 2.1モデル（約428MB）が自動ダウンロードされます。GPU（CUDA）がない場合はCPUモードで動作しますが、セグメンテーション速度が低下します。
+初回起動時にSAM 2.1モチE���E�紁E28MB�E�が自動ダウンロードされます、EPU�E�EUDA�E�がなぁE��合�ECPUモードで動作しますが、セグメンチE�Eション速度が低下します、E
+## 惁E��の置き場
 
-## 情報の置き場
-
-| 内容 | 正本 |
+| 冁E�� | 正本 |
 |---|---|
-| 現在地・次の作業・判断待ち | [STATUS.md](./STATUS.md) |
-| 判断理由・作業履歴・検証結果 | [WORKLOG.md](./WORKLOG.md) |
-| 目標・版の計画 | [ROADMAP.md](./docs/ROADMAP.md) |
-| 仕様・構造 | [docs/DESIGN.md](./docs/DESIGN.md)・[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) |
-| 検証方法 | [docs/TESTING.md](./docs/TESTING.md) |
-| 独立した課題・変更のレビュー | [Issues](https://github.com/nununukibara/202-vyrezchik/issues)・[Pull requests](https://github.com/nununukibara/202-vyrezchik/pulls) |
+| 現在地・次の作業・判断征E�� | [STATUS.md](./STATUS.md) |
+| 判断琁E��・作業履歴・検証結果 | [WORKLOG.md](./WORKLOG.md) |
+| 目標�E版�E計画 | [ROADMAP.md](./docs/ROADMAP.md) |
+| 仕様�E構造 | [docs/DESIGN.md](./docs/DESIGN.md)・[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) |
+| 検証方況E| [docs/TESTING.md](./docs/TESTING.md) |
+| 独立した課題�E変更のレビュー | [Issues](https://github.com/nununukibara/vyrezchik/issues)・[Pull requests](https://github.com/nununukibara/vyrezchik/pulls) |
 
-## 状態の言葉
-
-機能は **提案 → 承認済み → 実装済み → 検証済み → 採用済み → リリース済み** を区別します。
+## 状態�E言葁E
+機�Eは **提桁EↁE承認済み ↁE実裁E��み ↁE検証済み ↁE採用済み ↁEリリース済み** を区別します、E
